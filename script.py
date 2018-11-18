@@ -41,15 +41,11 @@ def directory_setup(path):
 @click.option('-s', '--speed', default=2.0, show_default=True, type=click.FloatRange(1.1, 4.0))
 @click.pass_obj
 def convert_speed(paths, speed):
-    if speed > 2.0:
-        speed_b = speed / 2
-        speed = 2.0
-    else:
-        speed_b = 1.0
+    speed = speed / 2
 
     input_file_type = '*.mp3'
     output_file_func = lambda input_f: join(paths[1], basename(input_f))
-    parameters = '-filter:a "atempo={0},atempo={1}" -c:a libmp3lame -q:a 4'.format(speed, speed_b)
+    parameters = '-filter:a "atempo={0},atempo=2.0" -c:a libmp3lame -q:a 4'.format(speed)
 
     convert_(paths[0], input_file_type, output_file_func, parameters)
 
