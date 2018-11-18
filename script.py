@@ -4,7 +4,6 @@
 
 import glob
 import json
-import click
 import subprocess
 from os import makedirs, remove, rmdir
 from os.path import basename, join
@@ -12,6 +11,7 @@ from itertools import count
 from functools import partial
 from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
+import click
 
 @click.group()
 @click.argument('path', type=click.Path(exists=True))
@@ -76,11 +76,11 @@ def split_chapters(paths):
 @cli.command(name='concat')
 @click.option('-bs', '--batchsize', default=1000, type=int, help='Specify how many files you want to concat together at a time')
 @click.pass_obj
-def concat_files(paths, batch_size):
+def concat_files(paths, batchsize):
     """Reduce the number of files by concating them together in groups of $batchsize."""
     files = sorted(glob.glob(join(paths[0], '*.mp3')))
-    batch_size = min(batch_size, len(files))
-    input_lists = [files[i:i+batch_size] for i in range(0, len(files), batch_size)]
+    batchsize = min(batchsize, len(files))
+    input_lists = [files[i:i+batchsize] for i in range(0, len(files), batchsize)]
     _concat_files([(input_list, join(paths[1], f'output{i}.mp3')) for i, input_list in enumerate(input_lists)])
 
 
