@@ -9,6 +9,7 @@ import subprocess
 from os import makedirs, remove
 from os.path import basename, join
 from functools import partial
+from itertools import count
 from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
 
@@ -23,14 +24,13 @@ def cli(ctx, path):
 
 def directory_setup(path):
     """Create directory to put the new files in."""
-    i = 1
-    while True:
+    for i in count(1):
         new_path = path + str(i)
         try:
             makedirs(new_path)
             break
         except:
-            i += 1
+            pass
     return new_path
 
 
@@ -38,32 +38,13 @@ def directory_setup(path):
 @click.option('-s', '--speed', default=2.0, show_default=True, type=click.FloatRange(1.1, 4.0))
 @click.pass_obj
 def convert_speed(paths, speed):
-    speed = speed / 2
-
-    input_file_type = '*.mp3'
-    output_file_func = lambda input_f: join(paths[1], basename(input_f))
-    parameters = f'-filter:a "atempo={speed},atempo=2.0" -c:a libmp3lame -q:a 4'
-
-    _convert(paths[0], input_file_type, output_file_func, parameters)
+    _run_commands([f'ffmpeg -i "{input_file}" -filter:a "atempo={speed / 2},atempo=2.0" -c:a libmp3lame -q:a 4 "{join(paths[1], basename(input_file))}"' for input_file in glob.glob(join(paths[0], '*.mp3'))])
 
 
 @cli.command(name='type')
 @click.pass_obj
 def convert_type(paths):
-    input_file_type = '*.m4a'
-    output_file_func = lambda input_f: join(paths[1], basename(input_f).replace('.m4a', '.mp3'))
-    parameters = '-b:a 192k -vn'
-
-    _convert(paths[0], input_file_type, output_file_func, parameters)
-
-
-def _convert(old_path, input_file_type, output_file_func, parameters):
-    commands = []
-    for input_file in glob.glob(join(old_path, input_file_type)):
-        output_file = output_file_func(input_file)
-        commands.append(f'ffmpeg -i "{input_file}" {parameters} "{output_file}"')
-
-    _run_commands(commands)
+    _run_commands([f'ffmpeg -i "{input_file}" -b:a 192k -vn "{join(paths[1], basename(input_file).replace(".m4a", ".mp3"))}"' for input_file in glob.glob(join(paths[0], '*.m4a'))])
 
 
 @cli.command(name='duration')
@@ -73,11 +54,10 @@ def convert_duration(paths, duration):
     """Concat mp3 files and then split into files of duration $duration."""
     duration = duration * 60
     files = sorted(glob.glob(join(paths[0], '*.mp3')))
-    temp_file = join(new_path, 'temp.mp3')
+    temp_file = join(paths[1], 'temp.mp3')
     _concat_files([(files, temp_file)])
     
-    parameters = '-show_entries format=duration -v quiet -of csv="p=0"'
-    completed_process = subprocess.run('ffprobe -i "{temp_file}" {parameters}', stdout=subprocess.PIPE, shell=True)
+    completed_process = subprocess.run('ffprobe -i "{temp_file}" -show_entries format=duration -v quiet -of csv="p=0"', stdout=subprocess.PIPE, shell=True)
     total_duration = float(completed_process.stdout)
     num_files = round(total_duration / duration)
 
@@ -98,36 +78,19 @@ def convert_duration(paths, duration):
 @click.pass_obj
 def split_chapters(paths):
     filename = glob.glob(paths[0] + '/*')[0]
-    parameters = '-print_format json -show_chapters -loglevel error'
-    completed_process = subprocess.run('ffprobe -i "{filename}" {parameters}', stdout=subprocess.PIPE, shell=True)
-    chapters_info = json.loads(completed_process.stdout)['chapters']
-    start_duration_filename = []
-    for entry in chapters_info:
-        start_time = float(entry['start_time'])
-        duration = float(entry['end_time']) - start_time
-        output_file = join(paths[1], entry['tags']['title'] + '.mp3')
-        start_duration_filename.append((start_time, duration, output_file))
-    
-    _split_file(filename, start_duration_filename)
+    completed_process = subprocess.run(f'ffprobe -i "{filename}" -print_format json -show_chapters -loglevel error', stdout=subprocess.PIPE, shell=True)
+    _split_file(filename, [(float(entry['start_time']), float(entry['end_time']) - float(entry['start_time']), join(paths[1], entry['tags']['title'] + '.mp3')) for entry in json.loads(completed_process.stdout)['chapters']])
 
 
 @cli.command(name='concat')
-@click.option('-bs', '--batchsize', default=0, type=int, help='Specify how many files you want to concat together at a time')
+@click.option('-bs', '--batchsize', default=1000, type=int, help='Specify how many files you want to concat together at a time')
 @click.pass_obj
 def concat_files(paths, batch_size):
     files = sorted(glob.glob(join(paths[0], '*.mp3')))
-
-    if batch_size == 0:
-        batch_size = len(files)
-
+    batch_size = min(batch_size, len(files))
     input_lists = [files[i:i+batch_size] for i in range(0, len(files), batch_size)]
 
-    input_output_list = []
-    for i, input_list in enumerate(input_lists):
-        output_file = join(paths[1], f'output{i}.mp3')
-        input_output_list.append((input_list, output_file))
-
-    _concat_files(input_output_list)
+    _concat_files([(input_list, join(paths[1], f'output{i}.mp3')) for i, input_list in enumerate(input_lists)])
 
 
 def _split_file(path, start_duration_filename):
