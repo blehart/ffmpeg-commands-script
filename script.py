@@ -99,21 +99,14 @@ def concat_files(paths, batch_size):
     _concat_files([(input_list, join(paths[1], f'output{i}.mp3')) for i, input_list in enumerate(input_lists)])
 
 
-def _split_file(path, start_duration_filename):
+def _split_file(path, split_info):
     "Given an input file, and a list of tuples containing start time, duration, and an output file.  Split the input file."""
-    commands = []
-    for start, duration, output_file in start_duration_filename:
-        commands.append(f'ffmpeg -i "{path}" -acodec copy -t {duration} -ss {start} "{output_file}"')
-    _run_commands(commands)
+    _run_commands([f'ffmpeg -i "{path}" -acodec copy -t {duration} -ss {start} "{output_file}"' for start, duration, output_file in split_info])
 
 
 def _concat_files(input_output_list):
     """Given a list of tuples, each tuple containing a list of input files, and one output file.  Concat input files into output files."""
-    commands = []
-    for input_list, output_file in input_output_list:
-        input_files = 'concat:' + '|'.join(input_list)
-        commands.append(f'ffmpeg -i "{input_files}" -acodec copy "{output_file}"')
-    _run_commands(commands)
+    _run_commands([f'ffmpeg -i "concat:{"|".join(input_list)}" -acodec copy "{output_file}"' for input_list, output_file in input_output_list])
 
 
 def _run_commands(commands):
