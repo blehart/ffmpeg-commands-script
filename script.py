@@ -177,7 +177,7 @@ def _concat_files(input_output_list):
 def run_commands(commands):
     """Run a set of command line operations in parallel, cpu_count - 1 at a time."""
     pool = Pool(cpu_count() - 1)
-    pool.imap(partial(subprocess.run, shell=True), commands)
+    pool.map(partial(subprocess.run, shell=True), commands)
 
 
 if __name__ == "__main__":
