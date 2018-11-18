@@ -19,6 +19,8 @@ FFPROBE_TEMPLATE = 'ffprobe -i "{0}" {1}'
 @click.argument('path', type=click.Path(exists=True))
 @click.pass_context
 def cli(ctx, path):
+    if path.endswith('/'):
+        path = path[:-1]
     ctx.obj = (path, directory_setup(path))
 
 
