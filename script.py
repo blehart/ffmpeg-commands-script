@@ -38,12 +38,14 @@ def directory_setup(path):
 @click.option('-s', '--speed', default=2.0, show_default=True, type=click.FloatRange(1.1, 4.0))
 @click.pass_obj
 def convert_speed(paths, speed):
+    """Increase the speed of files by a factor of $speed."""
     _run_commands([f'ffmpeg -i "{input_file}" -filter:a "atempo={speed / 2},atempo=2.0" -c:a libmp3lame -q:a 4 "{join(paths[1], basename(input_file))}"' for input_file in glob.glob(join(paths[0], '*.mp3'))])
 
 
 @cli.command(name='type')
 @click.pass_obj
 def convert_type(paths):
+    """Converts m4a files into mp3 files"""
     _run_commands([f'ffmpeg -i "{input_file}" -b:a 192k -vn "{join(paths[1], basename(input_file).replace(".m4a", ".mp3"))}"' for input_file in glob.glob(join(paths[0], '*.m4a'))])
 
 
@@ -51,7 +53,7 @@ def convert_type(paths):
 @click.option('-d', '--duration', default=60, show_default=True, type=int, help='Specify the duration in minutes for the change duration operation')
 @click.pass_obj
 def convert_duration(paths, duration):
-    """Concat mp3 files and then split into files of duration $duration."""
+    """Concat and then split into files of duration $duration."""
     duration = duration * 60
     temp_file = join(paths[1], 'temp.mp3')
     _concat_files([(sorted(glob.glob(join(paths[0], '*.mp3'))), temp_file)])
@@ -75,6 +77,7 @@ def convert_duration(paths, duration):
 @cli.command(name='chapters')
 @click.pass_obj
 def split_chapters(paths):
+    """Split a file into the chapters defined in the metadata."""
     filename = glob.glob(paths[0] + '/*')[0]
     completed_process = subprocess.run(f'ffprobe -i "{filename}" -print_format json -show_chapters -loglevel error', stdout=subprocess.PIPE, shell=True)
     chapter_info = json.loads(completed_process.stdout)['chapters']
@@ -89,6 +92,7 @@ def split_chapters(paths):
 @click.option('-bs', '--batchsize', default=1000, type=int, help='Specify how many files you want to concat together at a time')
 @click.pass_obj
 def concat_files(paths, batch_size):
+    """Reduce the number of files by concating them together in groups of $batchsize."""
     files = sorted(glob.glob(join(paths[0], '*.mp3')))
     batch_size = min(batch_size, len(files))
     input_lists = [files[i:i+batch_size] for i in range(0, len(files), batch_size)]
