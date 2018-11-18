@@ -6,7 +6,7 @@ import glob
 import json
 import click
 import subprocess
-from os import makedirs, remove
+from os import makedirs, remove, rmdir
 from os.path import basename, join
 from functools import partial
 from itertools import count
@@ -77,7 +77,12 @@ def convert_duration(paths, duration):
 def split_chapters(paths):
     filename = glob.glob(paths[0] + '/*')[0]
     completed_process = subprocess.run(f'ffprobe -i "{filename}" -print_format json -show_chapters -loglevel error', stdout=subprocess.PIPE, shell=True)
-    _split_file(filename, [(float(entry['start_time']), float(entry['end_time']) - float(entry['start_time']), join(paths[1], entry['tags']['title'] + '.mp3')) for entry in json.loads(completed_process.stdout)['chapters']])
+    chapter_info = json.loads(completed_process.stdout)['chapters']
+    if not chapter_info:
+        print('Chapters Not Found')
+        rmdir(paths[1])
+    else:
+        _split_file(filename, [(float(entry['start_time']), float(entry['end_time']) - float(entry['start_time']), join(paths[1], entry['tags']['title'] + '.mp3')) for entry in chapter_info])
 
 
 @cli.command(name='concat')
