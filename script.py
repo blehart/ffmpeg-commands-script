@@ -8,8 +8,8 @@ import click
 import subprocess
 from os import makedirs, remove, rmdir
 from os.path import basename, join
-from functools import partial
 from itertools import count
+from functools import partial
 from multiprocessing import cpu_count
 from multiprocessing.dummy import Pool
 
@@ -32,21 +32,6 @@ def directory_setup(path):
         except:
             pass
     return new_path
-
-
-@cli.command(name='speed')
-@click.option('-s', '--speed', default=2.0, show_default=True, type=click.FloatRange(1.1, 4.0))
-@click.pass_obj
-def convert_speed(paths, speed):
-    """Increase the speed of files by a factor of $speed."""
-    _run_commands([f'ffmpeg -i "{input_file}" -filter:a "atempo={speed / 2},atempo=2.0" -c:a libmp3lame -q:a 4 "{join(paths[1], basename(input_file))}"' for input_file in glob.glob(join(paths[0], '*.mp3'))])
-
-
-@cli.command(name='type')
-@click.pass_obj
-def convert_type(paths):
-    """Converts m4a files into mp3 files"""
-    _run_commands([f'ffmpeg -i "{input_file}" -b:a 192k -vn "{join(paths[1], basename(input_file).replace(".m4a", ".mp3"))}"' for input_file in glob.glob(join(paths[0], '*.m4a'))])
 
 
 @cli.command(name='duration')
@@ -97,6 +82,21 @@ def concat_files(paths, batch_size):
     batch_size = min(batch_size, len(files))
     input_lists = [files[i:i+batch_size] for i in range(0, len(files), batch_size)]
     _concat_files([(input_list, join(paths[1], f'output{i}.mp3')) for i, input_list in enumerate(input_lists)])
+
+
+@cli.command(name='speed')
+@click.option('-s', '--speed', default=2.0, show_default=True, type=click.FloatRange(1.1, 4.0))
+@click.pass_obj
+def convert_speed(paths, speed):
+    """Increase the speed of files by a factor of $speed."""
+    _run_commands([f'ffmpeg -i "{input_file}" -filter:a "atempo={speed / 2},atempo=2.0" -c:a libmp3lame -q:a 4 "{join(paths[1], basename(input_file))}"' for input_file in glob.glob(join(paths[0], '*.mp3'))])
+
+
+@cli.command(name='type')
+@click.pass_obj
+def convert_type(paths):
+    """Converts m4a files into mp3 files"""
+    _run_commands([f'ffmpeg -i "{input_file}" -b:a 192k -vn "{join(paths[1], basename(input_file).replace(".m4a", ".mp3"))}"' for input_file in glob.glob(join(paths[0], '*.m4a'))])
 
 
 def _split_file(path, split_info):
