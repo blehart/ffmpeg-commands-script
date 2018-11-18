@@ -53,12 +53,10 @@ def convert_type(paths):
 def convert_duration(paths, duration):
     """Concat mp3 files and then split into files of duration $duration."""
     duration = duration * 60
-    files = sorted(glob.glob(join(paths[0], '*.mp3')))
     temp_file = join(paths[1], 'temp.mp3')
-    _concat_files([(files, temp_file)])
-    
-    completed_process = subprocess.run('ffprobe -i "{temp_file}" -show_entries format=duration -v quiet -of csv="p=0"', stdout=subprocess.PIPE, shell=True)
-    total_duration = float(completed_process.stdout)
+    _concat_files([(sorted(glob.glob(join(paths[0], '*.mp3'))), temp_file)])
+
+    total_duration = float(subprocess.run(f'ffprobe -i "{temp_file}" -show_entries format=duration -v quiet -of csv="p=0"', stdout=subprocess.PIPE, shell=True).stdout)
     num_files = round(total_duration / duration)
 
     start_duration_filename = []
@@ -89,7 +87,6 @@ def concat_files(paths, batch_size):
     files = sorted(glob.glob(join(paths[0], '*.mp3')))
     batch_size = min(batch_size, len(files))
     input_lists = [files[i:i+batch_size] for i in range(0, len(files), batch_size)]
-
     _concat_files([(input_list, join(paths[1], f'output{i}.mp3')) for i, input_list in enumerate(input_lists)])
 
 
