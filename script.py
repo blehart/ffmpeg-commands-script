@@ -39,7 +39,7 @@ def directory_setup(path):
 @click.pass_obj
 def convert_duration(paths, duration):
     """Concat and then split into files of duration $duration."""
-    duration = duration * 60
+    duration *= 60
     temp_file = join(paths[1], 'temp.mp3')
     _concat_files([(sorted(glob.glob(join(paths[0], '*.mp3'))), temp_file)])
 
@@ -103,8 +103,7 @@ def _concat_files(input_output_list):
 
 def _run_commands(commands):
     """Run a set of command line operations in parallel, cpu_count - 1 at a time."""
-    pool = Pool(cpu_count() - 1)
-    pool.map(partial(subprocess.run, shell=True), commands)
+    Pool(cpu_count() - 1).map(partial(subprocess.run, shell=True), commands)
 
 
 if __name__ == "__main__":
