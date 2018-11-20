@@ -44,10 +44,10 @@ def convert_duration(paths, duration):
     _concat_files([(sorted(glob.glob(join(paths[0], '*.mp3'))), temp_file)])
 
     total_duration = float(subprocess.run(f'ffprobe -i "{temp_file}" -show_entries format=duration -v quiet -of csv="p=0"', stdout=subprocess.PIPE, shell=True).stdout)
-    start_duration_filename = [(start, start + duration, join(paths[1], f'output{start / duration}.mp3')) for start in range(0, total_duration - duration, duration)]
-    start_duration_filename.append((total_duration - (duration + (total_duration % duration)), total_duration, join(paths[1], f'output{total_duration / duration}.mp3')))
+    start_end_filename = [(start, start + duration, join(paths[1], f'output{start / duration}.mp3')) for start in range(0, total_duration - duration, duration)]
+    start_end_filename.append((total_duration - (duration + (total_duration % duration)), total_duration, join(paths[1], f'output{total_duration / duration}.mp3')))
 
-    _split_file(temp_file, start_duration_filename)
+    _split_file(temp_file, start_end_filename)
     remove(temp_file)
 
 
