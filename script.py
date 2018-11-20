@@ -44,16 +44,8 @@ def convert_duration(paths, duration):
     _concat_files([(sorted(glob.glob(join(paths[0], '*.mp3'))), temp_file)])
 
     total_duration = float(subprocess.run(f'ffprobe -i "{temp_file}" -show_entries format=duration -v quiet -of csv="p=0"', stdout=subprocess.PIPE, shell=True).stdout)
-    num_files = round(total_duration / duration)
-
-    start_duration_filename = []
-    start = 0
-    for i in range(num_files):
-        if i == num_files - 1:
-            duration += total_duration % duration
-        output_file = join(paths[1], f'output{i}.mp3')
-        start_duration_filename.append((start, duration, output_file))
-        start += duration
+    start_duration_filename = [(start, start + duration, join(paths[1], f'output{start / duration}.mp3')) for start in range(0, total_duration - duration, duration)]
+    start_duration_filename.append((total_duration - (duration + (total_duration % duration)), total_duration, join(paths[1], f'output{total_duration / duration}.mp3')))
 
     _split_file(temp_file, start_duration_filename)
     remove(temp_file)
@@ -70,7 +62,7 @@ def split_chapters(paths):
         print('Chapters Not Found')
         rmdir(paths[1])
     else:
-        _split_file(filename, [(float(entry['start_time']), float(entry['end_time']) - float(entry['start_time']), join(paths[1], entry['tags']['title'] + '.mp3')) for entry in chapter_info])
+        _split_file(filename, [(float(entry['start_time']), float(entry['end_time']), join(paths[1], entry['tags']['title'] + '.mp3')) for entry in chapter_info])
 
 
 @cli.command(name='concat')
@@ -101,7 +93,7 @@ def convert_type(paths):
 
 def _split_file(path, split_info):
     "Given an input file, and a list of tuples containing start time, duration, and an output file.  Split the input file."""
-    _run_commands([f'ffmpeg -i "{path}" -acodec copy -t {duration} -ss {start} "{output_file}"' for start, duration, output_file in split_info])
+    _run_commands([f'ffmpeg -i "{path}" -acodec copy -ss {start} -to {end} "{output_file}"' for start, end, output_file in split_info])
 
 
 def _concat_files(input_output_list):
